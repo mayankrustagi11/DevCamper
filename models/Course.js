@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const CourseSchema = new mongoose.Schema({
     title: {
         type: String,
-        trin: true,
+        trim: true,
         required: [true, 'Please add a course title']
     },
     description: {
@@ -36,6 +36,39 @@ const CourseSchema = new mongoose.Schema({
         ref: 'Bootcamp',
         required: true
     }
+});
+
+// Static method to get avg of course tuitions
+CourseSchema.statics.getAveragrCost = async function(bootcampId) {
+    const obj = await this.aggregate([
+        {
+            $match: { bootcamp: bootcampId }
+        },
+        {
+            $group: {
+                _id: '$bootcamp',
+                averageCost: { $avg: '$tuition' }
+            }
+        }
+    ]);
+
+    try {
+       await this.model('Bootcamp').findByIdAndUpdate(bootcampId, {
+           averageCost: Math.ceil(obj[0].averageCost / 10) * 10
+       });
+    } catch (error) {
+        console.error(error);
+    }
+};
+
+// Call getAverageCost after save
+CourseSchema.post('save', function() {
+    this.constructor.getAveragrCost(this.bootcamp);
+});
+
+// Call getAverageCost before remove
+CourseSchema.pre('remove', function() {
+    this.constructor.getAveragrCost(this.bootcamp);
 });
 
 module.exports = mongoose.model('Course', CourseSchema);
