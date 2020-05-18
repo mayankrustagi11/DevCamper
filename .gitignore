@@ -1,2 +1,2 @@
 node_modules
-_data
+config/config.env
